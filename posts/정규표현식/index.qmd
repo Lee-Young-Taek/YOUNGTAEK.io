@@ -1,5 +1,5 @@
 ---
-title: "intro"
+title: "정규표현식"
 author: "Lee YoungTaek"
 date: "2025-07-22"
 categories: [code]
