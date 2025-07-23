@@ -1,0 +1,154 @@
+---
+title: "day9"
+author: "Lee YoungTaek"
+date: "2025-07-23"
+categories: [code]
+---
+
+## 1. 판다스와 정규표현식(Regex) 실습
+
+```python
+import pandas as pd
+import numpy as np
+
+df = pd.read_csv("../data/regex_practice_data.csv")
+df
+
+# 문제 1. 이메일 주소 찾기
+pattern = r"([\w\.]+@[\w\.]+)"
+
+df["이메일"] = df.iloc[:, 1].str.extract(pattern)
+
+# 문제 2. 휴대폰 번호(010 시작) 찾기
+pattern = r'(010-[0-9\-]+)'
+
+df["휴대폰 번호"] = df.iloc[:, 1].str.extract(pattern)
+# 문제 3. 일반 전화번호(지역번호 포함) 찾기
+pattern = r'([0-9]+-[0-9\-]+)'
+
+df["지역 번호"] = df.iloc[:, 1].str.extract(pattern)
+df["지역 번호"][df["지역 번호"].str.startswith('01')] = np.nan
+
+# 문제 4. 주소에서 ‘구’ 단위만 추출하기
+pattern = r'(\b\w+구\b)'
+
+df["지역 구"] = df.iloc[:, 1].str.extract(pattern)
+
+# 문제 5. 날짜(YYYY-MM-DD) 형식 찾기
+pattern = r'(\d{4}-\d{2}-\d{2})'
+
+df["날짜 A"] = df.iloc[:, 1].str.extract(pattern)
+
+# 문제 6. 모든 날짜 형식 찾기 (YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD 포함)
+pattern = r'(\d{4}[-/.]\d{2}[-/.]\d{2})'
+
+df["날짜 B"] = df.iloc[:, 1].str.extract(pattern)
+
+# 문제 7. 가격 정보(₩ 포함) 찾기
+pattern = r'(₩[\d,]+)'
+
+df["가격 A"] = df.iloc[:, 1].str.extract(pattern)
+
+# 문제 8. 가격에서 숫자만 추출하기 (₩ 제거)
+pattern = r'(₩[\d,]+)'
+
+df["가격 B"] = df.iloc[:, 1].str.extract(pattern)
+df["가격 B"] = df["가격 B"].str.replace('₩', '')
+```
+
+```python
+df = pd.read_csv('../data/bike_data.csv')
+print(df.head())
+
+df.info()
+
+df = df.astype({'datetime' : 'datetime64[ns]', 'weather' : 'int64', 
+                'season' : 'object', 'workingday' : 'object', 
+                'holiday' : 'object'})
+
+# 계절(season) == 1일 때, 가장 대여량이 많은 시간대(hour)을 구하시오.
+df["hour"] = df["datetime"].dt.hour
+
+df1 = df.loc[df["season"]==1, :]
+
+time = df1.groupby("hour")["count"].mean().idxmax()
+count = df1.groupby("hour")["count"].mean().max()
+
+print(f"count가 가장 큰 hour는 {time}시이며, 대여량{int(count)}은 입니다.")
+
+
+
+# 각 계절(season)별 평균 대여량(count)을 구하시오.
+df.groupby("season")["count"].mean()
+
+# 특정 달(month) 동안의 총 대여량(count)을 구하시오.
+df["month"] = df["datetime"].dt.month
+
+df.loc[df["month"] == 1, :]["count"].sum()
+
+df.groupby("month")["count"].sum()
+
+# 가장 대여량이 많은 날짜를 구하시오.
+df["date"] = df["datetime"].dt.date
+date = df.groupby("date")["count"].sum().idxmax()
+count = df.groupby("date")["count"].sum().max()
+
+print(f"가장 대여량이 많은 날짜는 {date}이며, 대여량은 {count}입니다.")
+
+# 시간대(hour)별 평균 대여량(count)을 구하시오.
+df.groupby("hour")["count"].mean()
+
+# 특정 요일(weekday) 동안의 총 대여량(count)을 구하시오.
+weekday = df["weekday"] = df["datetime"].dt.weekday
+sum = df.groupby("weekday")["count"].sum()
+
+weekday_ = {0:"월요일",
+            1:"화요일",
+            2:"수요일",
+            3:"목요일",
+            4:"금요일",
+            5:"토요일",
+            6:"일요일",}
+
+print(f"{weekday_[weekday[0]]}동안의 총 대여량은 {sum[0]}입니다.")
+
+# 주어진 Bike Sharing 데이터를 사용하여 넓은 형식(wide format)에서 
+# 긴 형식(long format)으로 변환하시오. casual과 registered 열을 
+# 하나의 열로 변환하고, 각 기록의 대여 유형과 대여 수를 포함하는 긴 형식 
+# 데이터프레임을 만드시오.
+df1 = df.melt(id_vars=["datetime", "season"], 
+                value_vars=["casual", "registered"], 
+                var_name="user_type",
+                value_name="user_count")
+
+# 이전에 생성한 긴 형식 데이터프레임을 활용하여 각 계절(season)별로 
+# casual과 registered 사용자의 평균 대여 수(count)를 구하시오.
+
+df1.groupby(["season", "user_type"])["user_count"].mean().reset_index()
+
+pd.set_option('display.max_columns', None) # 전체 칼럼 정보 프린트 옵션
+df = pd.read_csv('../data/logdata.csv')
+print(df.head(2))
+
+# 로그 칼럼에서 숫자 정보만 추출하시오.
+df["로그"].str.findall(r'\d+').str.join(' ')
+
+# 로그 칼럼에서 모든 시간 정보를 추출하시오.
+pattern = r"r(\d{2}:\d{2}:\d{2})"
+df["로그"].str.extract(pattern).apply(' '.join, axis=1)
+
+# 로그 칼럼에서 한글 정보만 추출하시오.
+df["로그"].str.findall(r'[가-힣]+').str.join(' ')
+
+# 로그 칼럼에서 특수 문자를 제거하시오.
+df["로그"].str.findall(r'[a-zA-Z0-9가-힣]+').str.join(' ')
+df["로그"].str.replace(r'[^a-zA-Z0-9가-힣]+', " ", regex=True)
+
+# 로그 칼럼에서 유저, Amount 값을 추출한 후 각 유저별 Amount의 
+# 평균값을 계산하시오.
+user_pattern = r'User:\s*([가-힣]+)'
+amount_pattern = r'Amount:\s*(\d+)'
+
+df["user"] = df["로그"].str.extract(user_pattern)
+df["amount"] = df["로그"].str.extract(amount_pattern).astype(float)
+```
